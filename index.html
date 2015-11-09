@@ -1,46 +1,194 @@
 <!DOCTYPE html>
-<html>
-<head>
-	<meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Spotify Template</title>
-	
-	<!-- Include libraries -->
-	<script src="https://code.jquery.com/jquery.min.js"></script>
-	<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
-	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
-	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.2/angular.min.js"></script>
-	
-	<!-- Read scripts -->
-	<script src="app.js"></script>
-	<link href="app.css" type="text/css" rel="stylesheet"/>	
-	
-</head>
-<body>
-	<!-- Initiate app -->
-	<div ng-app="myApp" ng-controller="myCtrl">
-		<!-- Form -->
-		<form class="container" name="songForm">
-			<div class="form-group">
-				<label>Spotify search:</label>
-				<input name="search" placeholder="Enter your search.." ng-model="track" class="form-control"></input>
-			</div>
-			<div class="form-group">
-				<button ng-disabled="songForm.search.$invalid" class="btn btn-primary" ng-click="getSongs()" type="submit">Submit</button>
-			</div>
-		</form>
+<html lang="en">
+	<head>
+		<!-- Set meta properties -->
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Soichify</title>
 		
-		<!-- Results -->
-		<div class="container-fixed">
-			<div class="help-block">
-				<span ng-show="tracks.length>0">Click to sample</span>
-				<span ng-show="currentSong && !audioObject.paused">(playing)</span>
-			</div>
-			<ul>
-				<li ng-repeat="track in tracks" class="" ng-click="play(track.preview_url)" title="{{track.name}}">{{track.name + ', by ' + track.artists[0].name}}</li>
-			</ul>			
+		<!-- Styles -->
+		<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+
+		<!-- Angular -->
+		<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular.min.js"></script>
+
+		<!-- Firebase -->
+		<script src="https://cdn.firebase.com/js/client/2.2.4/firebase.js"></script>
+
+		<!-- AngularFire -->
+		<script src="https://cdn.firebase.com/libs/angularfire/1.1.3/angularfire.min.js"></script>
+		
+		<!-- Scripts -->
+		<link href="css/main.css" rel="stylesheet" type="text/css" />
+		<script type="text/javascript" src="js/main.js"></script>
+		<script src="https://code.jquery.com/jquery.min.js"></script>
+		<link rel="shortcut icon" type="image/png" href="img/soichify-icon.jpg">
+	</head>
+
+	<!-- Initiate app and controller on body -->
+	<body ng-app="myApp" ng-controller="myCtrl">
+
+
+
+	<!-- nav bar -->
+		<nav class="navbar navbar-default" id="soichiNav" ng-show="userId">
+		    <div ng-show="userId" class="container-fluid" align="center">
+		        <!-- Header for mobile -->
+		        <div class="navbar-header">
+		            <ul>
+		            	<span>
+			            	<img id="logo" src="img/logo.jpg"/>
+						    <a href ng-click="showSongs = !showSongs">Switch Menu</a>
+							<input id="searchBox" name="search" placeholder="Enter your search.." ng-model="track"></input>
+							<button ng-disabled="songForm.search.$invalid" class="btn btn-primary" href ng-click="showSongs = true; getSongs()" type="submit">Search</button>
+						</span>
+					</ul>
+
+					<ul id="username">
+						<span>Signed in as {{users[userId].handle}}</span>
+						<img class="image" ng-src="{{users[userId].userImage}}"></img>
+						<button ng-click="logOut()" class="btn btn-warning">Logout</button>
+					</ul>
+				</div>     
+		        <!-- Screen navigation elements -->
+	        	<div id="navbar" class="navbar-collapse collapse">
+	        </div>
+		</nav>
+
+
+
+		<!-- Header1 -->
+		<div ng-show="!userId" class="container-fluid" id="createAccount">
+				<center><img id="logo" src="img/logo.jpg"/></center>
+				<h1>Create Your Free Account Today</h1>
 		</div>
-	</div>
-</body>
+
+
+
+		<!-- Header2 -->
+		<div ng-show="userId" class="container-fluid" id="soichiHeader">
+			<h1>Soichify</h1>
+			<h2>Spotify + Twitter</h2>
+		</div>
+
+
+
+		<!-- Write tweets -->
+		<div ng-show="userId">
+			<!-- Show image of current user -->
+			<img class="image" ng-src="{{users[userId].userImage}}"></img>
+
+			<!-- Form for writing tweets -->
+			<form name="tweet-input" id="tweet-input">
+
+				<!-- Bind model newTweet to a textarea element.
+					set a maximum length of 140 characters -->					
+				<textarea placeholder="Tweet about the music" ng-model="newTweet" name="text" class="form-control" requred ng-maxlength="140"></textarea>
+				
+				<!-- Tweet button -->
+				<div class="form-group send-tweet">
+
+					<!-- Execute the tweet function when clicked -->
+					<button ng-click="tweet(users[userId])" ng-disabled="tweet-input.$invalid" type="submit" class="btn btn-primary">
+						<i class="fa fa-pencil-square-o"></i> Tweet
+					</button> 					
+				</div>
+			</form>
+		</div>
+
+
+
+		<!-- Sign-in/sign-up form: show if userId isn't defined -->
+		<div class="container">
+			<form name="myForm" ng-show="!userId" novalidate>
+				<br>
+				<!-- Bind model "handle" to this input, set minimum length, and make it required -->
+				<div class="form-group">
+					<label>Username:</label>
+					<input ng-model="handle" ng-minlength="5" name="handle" class="form-control">	
+					
+					<!-- Add an error message if the length is too short -->	
+					<p class="help-block" ng-show="myForm.handle.$error.minlength">Too short!</p>
+					
+				</div>	
+
+				<!-- Input for image URL -->
+				<div class="form-group">
+					<label>Avator (Image URL):</label>
+					<img ng-src="{{userImage}}">							
+					<input name="img" class="form-control" ng-model="userImage">
+				</div>
+
+				<!-- Bind model "email" to this input and make it required -->
+				<div class="form-group">
+					<label>Email:</label>
+					<input value="" ng-model="email" type="email" class="form-control"></input>
+
+					<!-- Show an error message if the email is not valid -->	
+					<p class="help-block" ng-show="myForm.email.$error.email">Not an email!</p>
+				</div>
+
+				<!-- Password -->
+				<div class="form-group">
+					<label>Password:</label>
+					<input value="" type="password" class="form-control" ng-model="password" required></input>      
+				</div>
+
+				<!-- Submit buttons: should only be active if certain inputs are valid -->
+				<div class="form-group">
+					<button ng-click="signUp()" ng-disabled="myForm.$invalid" type="submit" class="btn btn-primary">Sign-up</button> 
+					<button ng-click="signIn()" ng-disabled="myForm.email.$invalid || myForm.password.$invalid" type="submit" class="btn btn-primary">Sign-in</button>
+				</div>
+			</form>
+
+		<!-- Search for music -->
+		<div ng-app="myApp" ng-controller="myCtrl" ng-show="userId && showSongs">
+			<!-- Results -->
+			<br>
+			<div class="container-fixed">
+				<div class="help-block">
+					<span ng-show="tracks.length>0">Click to sample</span>
+					<span ng-show="currentSong && !audioObject.paused">(playing)</span>
+				</div>
+				<ul id="songUList">
+					<li id="songList" ng-repeat="track in tracks" class="" ng-click="play(track.preview_url, track)" title="{{track.name}}">{{track.name + ', by ' + track.artists[0].name}}</li>
+				</ul>			
+			</div>
+		</div>
+
+
+		<!-- Show tweets (if userId is defined) -->
+		<div ng-show="userId && !showSongs">
+			<!-- Use ng-repeat directive to repeat a div for each element in tweets -->
+			<div id="boxBorder" class="tweet-box" ng-repeat="tweet in tweets | orderBy : '-likes'">
+				<div>
+					
+					<!--
+					<div class="container">
+						<img ng-src="{{users[tweet.userId].userImage}}" alt="img">
+						<div class="textbox">
+							<p class="text">TEXT</p>
+						</div>
+					</div>
+					-->
+					
+					<img class="image" ng-src="{{users[tweet.userId].userImage}}"></img>
+					<span class="handle">{{users[tweet.userId].handle}}</span>
+					<span> listened to <b>{{tweet.song}}</b></span>
+					<!-- <span ng-repeat="track in tracks" class="" ng-click="play(&quot;{{tweet.url}}, &quot;{{tweet.track}})"> listened to <b>{{tweet.song}}</b></span> -->
+					<span> by <i>{{tweet.artist}}</i></span>
+					<span class="time" id="postDate">{{tweet.time | date}}</span>
+				</div>
+				<div class="tweet">
+					{{tweet.text}}
+				</div>
+				<div class="likes">
+					<i id="likeButton" ng-click="like(tweet)" class="fa fa-heart"></i>
+					<span>{{tweet.likes}}</span>
+				</div>
+			</div>
+		</div>
+	</body>
 </html>
